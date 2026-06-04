@@ -3,12 +3,34 @@ package com.ibdgs.driver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.io.File;
+import com.ibdgs.data.DataManagement;
 
 public class DriverRepository {
     private List<Driver> drivers;
 
     public DriverRepository() {
         this.drivers = new ArrayList<>();
+        this.dataManagement = new DataManagement();
+        this.driversFile = new File("drivers.txt");
+    }
+
+    // persistence helpers
+    private DataManagement dataManagement;
+    private File driversFile;
+
+    private void persistAll() {
+        try {
+            if (driversFile.exists()) {
+                driversFile.delete();
+            }
+            for (Driver d : drivers) {
+                dataManagement.addData(d.getDriverID(), d.getName(), d.getExperienceYears(), d.getLicenseType(),
+                        d.getAddress(), d.getBirthdate(), driversFile);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // D1: Check if driver ID is unique
@@ -17,11 +39,12 @@ public class DriverRepository {
     }
 
     // Add a new driver with all validations
-    public boolean add(String driverID, String name, int experienceYears, String licenseType, 
-                       String address, String birthdate) {
+    public boolean add(String driverID, String name, int experienceYears, String licenseType,
+            String address, String birthdate) {
         // D1: Validate driver ID format and uniqueness
         if (!Driver.isValidDriverID(driverID)) {
-            System.out.println("Error: Invalid driver ID format. Must be 10 chars with format: 2-9, 2-9, 2+ special chars (3-8), A-Z, A-Z");
+            System.out.println(
+                    "Error: Invalid driver ID format. Must be 10 chars with format: 2-9, 2-9, 2+ special chars (3-8), A-Z, A-Z");
             return false;
         }
 
@@ -44,6 +67,8 @@ public class DriverRepository {
 
         Driver newDriver = new Driver(driverID, name, experienceYears, licenseType, address, birthdate);
         drivers.add(newDriver);
+        // persist new driver to file
+        dataManagement.addData(driverID, name, experienceYears, licenseType, address, birthdate, driversFile);
         return true;
     }
 
@@ -75,7 +100,8 @@ public class DriverRepository {
             return false;
         }
 
-        // D4: If driver has more than 10 years of experience, license type cannot be changed
+        // D4: If driver has more than 10 years of experience, license type cannot be
+        // changed
         if (driver.getExperienceYears() > 10 && !driver.getLicenseType().equals(newLicenseType)) {
             System.out.println("Error: Cannot change license type for drivers with more than 10 years of experience.");
             return false;
@@ -88,6 +114,9 @@ public class DriverRepository {
         }
         driver.setAddress(newAddress);
 
+        // persist all drivers back to file
+        persistAll();
+
         return true;
     }
 
@@ -98,18 +127,22 @@ public class DriverRepository {
 
     // Additional helper methods for validation checks
 
-    // Check if a driver can drive an electric bus (B4: 5+ years experience required)
+    // Check if a driver can drive an electric bus (B4: 5+ years experience
+    // required)
     public boolean canDriveElectricBus(String driverID) {
         Driver driver = retrieve(driverID);
-        if (driver == null) return false;
+        if (driver == null)
+            return false;
         return driver.getExperienceYears() >= 5;
     }
 
-    // Check if a driver can drive based on age (B3: Drivers > 50 years cannot drive capacity >= 50)
+    // Check if a driver can drive based on age (B3: Drivers > 50 years cannot drive
+    // capacity >= 50)
     public boolean canDriveBusWithCapacity(String driverID, int busCapacity) {
         Driver driver = retrieve(driverID);
-        if (driver == null) return false;
-        
+        if (driver == null)
+            return false;
+
         int age = driver.getAge();
         if (age > 50 && busCapacity >= 50) {
             return false;
@@ -117,15 +150,16 @@ public class DriverRepository {
         return true;
     }
 
-    // Check if driver has required license (B5: Heavy or PublicTransport for electric/hybrid)
+    // Check if driver has required license (B5: Heavy or PublicTransport for
+    // electric/hybrid)
     public boolean hasRequiredLicense(String driverID, String busType) {
         Driver driver = retrieve(driverID);
-        if (driver == null) return false;
+        if (driver == null)
+            return false;
 
         if (busType.equals("Electricity") || busType.equals("Hybrid")) {
             return driver.getLicenseType().equals("Heavy") || driver.getLicenseType().equals("PublicTransport");
         }
         return true;
     }
-} 
-
+}

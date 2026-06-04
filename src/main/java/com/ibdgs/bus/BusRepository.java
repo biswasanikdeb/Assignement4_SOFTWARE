@@ -3,12 +3,34 @@ package com.ibdgs.bus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.io.File;
+import java.io.IOException;
+import com.ibdgs.data.DataManagement;
 
 public class BusRepository {
     private List<Bus> buses;
 
     public BusRepository() {
         this.buses = new ArrayList<>();
+        this.dataManagement = new DataManagement();
+        this.busesFile = new File("buses.txt");
+    }
+
+    // persistence helpers
+    private DataManagement dataManagement;
+    private File busesFile;
+
+    private void persistAll() {
+        try {
+            if (busesFile.exists()) {
+                busesFile.delete();
+            }
+            for (Bus b : buses) {
+                dataManagement.addData(b.getBusID(), b.getCapacity(), b.getFuelLevel(), b.getFuelType(), busesFile);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // B1: Check if bus ID is unique
@@ -31,6 +53,8 @@ public class BusRepository {
 
         Bus newBus = new Bus(busID, capacity, fuelLevel, fuelType);
         buses.add(newBus);
+        // persist new entry
+        dataManagement.addData(busID, capacity, fuelLevel, fuelType, busesFile);
         return true;
     }
 
@@ -57,13 +81,16 @@ public class BusRepository {
 
         // B2: Capacity cannot increase, only stay same or decrease
         if (newCapacity > bus.getCapacity()) {
-            System.out.println("Error: Bus capacity cannot increase. Current: " + bus.getCapacity() + 
-                             ", Attempted: " + newCapacity);
+            System.out.println("Error: Bus capacity cannot increase. Current: " + bus.getCapacity() +
+                    ", Attempted: " + newCapacity);
             return false;
         }
 
         bus.setCapacity(newCapacity);
         bus.setFuelLevel(newFuelLevel);
+
+        // persist all buses back to file
+        persistAll();
 
         return true;
     }
